@@ -1,0 +1,23 @@
+{
+  "name": "recurring-transactions",
+  "version": "1.0.0",
+  "description": "upsert and return transactions",
+  "main": "app.js",
+  "scripts": {
+    "test": "echoau \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omgirok/recurring-transactions.git"
+  },
+  "author": "orion ou",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/omgirok/recurring-transactions/issues"
+  },
+  "homepage": "https://github.com/omgirok/recurring-transactions#readme",
+  "dependencies": {
+    "express": "^4.16.4",
+    "mongodb": "^3.1.8"
+  }
+}
