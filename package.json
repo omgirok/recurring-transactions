@@ -17,7 +17,9 @@
   },
   "homepage": "https://github.com/omgirok/recurring-transactions#readme",
   "dependencies": {
+    "excel-as-json": "^2.0.2",
     "express": "^4.16.4",
-    "mongodb": "^3.1.8"
+    "mongodb": "^3.1.8",
+    "mongoose": "^5.3.8"
   }
 }
