@@ -1,32 +1,28 @@
-// include node modules
+// author: orion ou
+// date: 11/03/2018
+// ==================== node modules ====================
 const express = require('express');
 const app = express();
 const port = 1984;
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 
-// mongodb connection
+// ==================== mongodb connection ====================
 mongoose.connect('mongodb://localhost:27017/interview_challenge', { useNewUrlParser: true });
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
   // we're connected!
-  console.log("hi");
+  console.log("connected to mongodb!");
 });
 
-// enable body parser for POST requests
+// ==================== enable body parser for POST requests ====================
 app.use(bodyParser.urlencoded({
     extended: true
 }));
 app.use(bodyParser.json());
 
-
-app.post('/', upsertTransactions);
-
-// start server
-app.listen(port, () => console.log(`Server is listening on port ${port}!`));
-
-// schema definition
+// ==================== schema definition ====================
 var transactionSchema = new mongoose.Schema({
     "name": String,
     "date": String,
@@ -35,10 +31,15 @@ var transactionSchema = new mongoose.Schema({
     "user_id": String,
 });
 var Transaction = mongoose.model('Transaction', transactionSchema);
-// routes
+
+// ==================== start server ====================
+app.listen(port, () => console.log(`Server is listening on port ${port}!`));
+
+// ==================== routes ====================
+app.post('/', upsertTransactions);
 app.get('/', getRecurringTransactions);
 
-// endpoint logic
+// ==================== endpoint logic ====================
 function findRecurrence(callback) {
     Transaction.aggregate([{$sort:{"name":1}}
         ]).then(function(res) {
@@ -119,7 +120,7 @@ function getRecurringTransactions(req, res) {
     })    
 }
 
-// helper methods
+// ==================== helper methods ====================
 function getName(s) {
     var words = s.split(' ');
     if (words.length == 1) {
@@ -149,7 +150,6 @@ function findRecurrences(arr) {
     // 1. check number of transactions for name
     // 2. check other most recent transaction and determine if dates follow a pattern
     // 3. check transaction amounts
-
     // there is only one transaction for this name and not recurring
     if (arr.length <= 1) {
         console.log("only 1 transaction, cannot be sure if is recurring transaction or not");

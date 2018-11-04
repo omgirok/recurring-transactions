@@ -39,4 +39,6 @@ query
            as the frequency of recurrence
         3) proceed as usual
 
+- code can be cleaned up even further since i'm recycling a lot of logic in detecting recurrences
+
     
