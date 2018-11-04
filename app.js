@@ -67,7 +67,6 @@ function upsertTransactions(req, res) {
 }
 function getRecurringTransactions(req, res) {
     findRecurrence((err, data) => {
-        // console.log(data);
         var lookup = {};
         for(var i = 0; i < data.length; i++) {
             var name = getName(data[i].name);
@@ -77,24 +76,20 @@ function getRecurringTransactions(req, res) {
                 lookup[name].push(newData);
             }
             else {
-                
                 lookup[name] = [newData];
             }
         }
-        var count = 0
+        
+        var results = [];
         // sort transactions by chronological order then find recurrences
         for (var bill in lookup) {
             lookup[bill] = sortChronological(lookup[bill]);
-            var companyTransactions = lookup[bill];
-            lookup[bill] = findRecurrences(lookup[bill]);
-            // var tempResult = findRecurrences(lookup[bill]);
-
-            // findRecurrences(lookup[bill]);
-            count += lookup[bill].length;
+            var x = findRecurrences(lookup[bill]);
+            if (x) {
+                results.push(x);
+            }
         }
-        console.log("COUNT!!!! " + count);
-        res.send(lookup);
-        
+        res.send(results);
         
     })    
 }
@@ -132,94 +127,74 @@ function findRecurrences(arr) {
 
     // there is only one transaction for this name and not recurring
     if (arr.length <= 1) {
-        console.log("only 1 transaction: " + arr[0].name);
-        console.log("removing 1 element");
-        return [];
+        console.log("only 1 transaction, cannot be sure if is recurring transaction or not");
+        return;
     }
-    // console.log(arr);
-    
-    var result = [];
     var o = {"name": arr[0].name, "user_id": arr[0].user_id};
     var recurring = checkTimePeriods(arr);
-    // console.log("RECURRING: " + recurring);
-    // if (recurring) {
-    //     for(var i = 0; i < recurring.length; i++) {
-    //         o['next_amt'] = recurring[recurring.length-1];
-    //         o['next_date'] = recurring[0];
-    //         o['transactions'] = recurring.slice(1,recurring.length-1);
-    //     }
-    // }
-    // if (recurring) {
-    //     o['transactions'] = recurring.slice(1,recurring.length-1);
-    // }
-    o['transactions'] = recurring;
-    result.push(o);
-    return result;
-    
-    function checkTimePeriods(arr) {
-        var diff = (arr[0].date - arr[1].date)/(1000*60*60*24);
-        console.log("CHECKING TIME PERIOD FOR");
-        console.log(arr[0].name, diff);
-        var sept = new Date("2018-08-15T00:00:00.000Z")
-        if (358 <= diff && diff <= 372) {
-            // most recent transaction is too old and most likely not recurring
-            if((sept - arr[0].date)/(1000*60*60*24) > 729) {
-                console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-                console.log("removing " + arr.length + " elements");
-                return []
-            }
-            return checkYearly(arr);
+    if (recurring) {
+        o['next_amt'] = recurring[recurring.length-2];
+        o['next_date'] = recurring[recurring.length-1];
+        o['transactions'] = recurring.slice(1,recurring.length-2);   
+        return o;    
+    }
+    return;
+
+}
+function checkTimePeriods(arr) {
+    var diff = (arr[0].date - arr[1].date)/(1000*60*60*24);
+    var sept = new Date("2018-08-15T00:00:00.000Z")
+    if (358 <= diff && diff <= 372) {
+        // most recent transaction is too old and most likely not recurring
+        if((sept - arr[0].date)/(1000*60*60*24) > 729) {
+            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
+            return;
         }
-        // monthly recurrence
-        if (28 <= diff && diff <= 32) {
-            if((sept - arr[0].date)/(1000*60*60*24) > 59) {
-                console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-                console.log("removing " + arr.length + " elements");
-                return []
-            }
-            return checkMonthly(arr);
+        return checkYearly(arr);
+    }
+    // monthly recurrence
+    if (28 <= diff && diff <= 32) {
+        if((sept - arr[0].date)/(1000*60*60*24) > 59) {
+            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
+            return;
         }
-        // biweekly recurrence
-        if (12 <= diff && diff <= 16) {
-            if((sept - arr[0].date)/(1000*60*60*24) > 27) {
-                console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-                console.log("removing " + arr.length + " elements");
-                return []
-            }
-            return checkBiweekly(arr);
+        return checkMonthly(arr);
+    }
+    // biweekly recurrence
+    if (12 <= diff && diff <= 16) {
+        if((sept - arr[0].date)/(1000*60*60*24) > 27) {
+            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
+            return;
         }
-        // weekly recurrence
-        if (5 <= diff && diff <= 9) {
-            if((sept - arr[0].date)/(1000*60*60*24) > 13) {
-                console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-                console.log("removing " + arr.length + " elements");
-                return []
-            }
-            return checkWeekly(arr);
+        return checkBiweekly(arr);
+    }
+    // weekly recurrence
+    if (5 <= diff && diff <= 9) {
+        if((sept - arr[0].date)/(1000*60*60*24) > 13) {
+            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
+            return;
         }
-        // daily recurrence
-        if (1 <= diff && diff <= 2) {
-            // most recent transaction is too old and most likely not recurring
-            if((sept - arr[0].date)/(1000*60*60*24) > 2) {
-                console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-                console.log("removing " + arr.length + " elements");
-                return []
-            }
-            return checkDaily(arr);
+        return checkWeekly(arr);
+    }
+    // daily recurrence
+    if (1 <= diff && diff <= 2) {
+        // most recent transaction is too old and most likely not recurring
+        if((sept - arr[0].date)/(1000*60*60*24) > 2) {
+            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
+            return []
         }
+        return checkDaily(arr);
     }
 }
-
 function checkYearly(arr) {
     var res = ["yearly"];
-    diff = 365;
+    var diff = 365;
     var offset = 1;
     var amounts = [];
     res.push(arr[0]);
     for(var i = 1; i < arr.length; i++) {
         // console.log("diff: " + diff);
         var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(1000*60*60*24));
-        // console.log("newDiff%diff: " + newDiff); 
         if(Math.abs(newDiff - diff) > 7) {
             // does not follow monthly pattern, skip transaction
             offset+=1
@@ -230,12 +205,11 @@ function checkYearly(arr) {
             amounts.push(arr[i].amount);
             res.push(arr[i]);
         }
-        // console.log((arr[0].date - arr[i].date)/(1000*60*60*24));    
     }
     var avg = amounts.reduce(
         ( accumulator, currentValue ) => accumulator + currentValue,
         0
-    );
+    ) / amounts.length;
     var nextDate = new Date(arr[0].date);
     nextDate.setFullYear(nextDate.getFullYear()+1);
     res.push(avg);
@@ -244,7 +218,7 @@ function checkYearly(arr) {
 }
 function checkMonthly(arr) {
     var res = ["monthly"];
-    diff = 30;
+    var diff = 30;
     var offset = 1;
     var amounts = [];
     res.push(arr[0]);
@@ -261,13 +235,12 @@ function checkMonthly(arr) {
             offset=1
             amounts.push(arr[i].amount);
             res.push(arr[i]);
-        }
-        // console.log((arr[0].date - arr[i].date)/(1000*60*60*24));    
+        }  
     }
     var avg = amounts.reduce(
         ( accumulator, currentValue ) => accumulator + currentValue,
         0
-    );
+    ) / amounts.length;
     var nextDate = new Date(arr[0].date);
     nextDate.setTime(nextDate.getTime() + 1000*60*60*24*30);
     res.push(avg);
@@ -276,7 +249,7 @@ function checkMonthly(arr) {
 }
 function checkBiweekly(arr) {
     var res = ["biweekly"];
-    diff = 14;
+    var diff = 14;
     var offset = 1;
     var amounts = [];
     res.push(arr[0]);
@@ -299,7 +272,7 @@ function checkBiweekly(arr) {
     var avg = amounts.reduce(
         ( accumulator, currentValue ) => accumulator + currentValue,
         0
-    );
+    ) / amounts.length;
     var nextDate = new Date(arr[0].date);
     nextDate.setTime(nextDate.getTime() + 1000*60*60*24*14);
     res.push(avg);
@@ -308,14 +281,13 @@ function checkBiweekly(arr) {
 }
 function checkWeekly(arr) {
     var res = ["weekly"];
-    diff = 7;
+    var diff = 7;
     var offset = 1;
     var amounts = [];
     res.push(arr[0]);
     for(var i = 1; i < arr.length; i++) {
         // console.log("diff: " + diff);
         var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(1000*60*60*24));
-        console.log("newDiff%diff: " + newDiff); 
         if(Math.abs(newDiff - diff) > 1) {
             // does not follow monthly pattern, skip transaction
             offset+=1
@@ -331,7 +303,7 @@ function checkWeekly(arr) {
     var avg = amounts.reduce(
         ( accumulator, currentValue ) => accumulator + currentValue,
         0
-    );
+    ) / amounts.length;;
     var nextDate = new Date(arr[0].date);
     nextDate.setTime(nextDate.getTime() + 1000*60*60*24*7);
     res.push(avg);
@@ -340,7 +312,7 @@ function checkWeekly(arr) {
 }
 function checkDaily(arr) {
     var res = ["daily"];
-    diff = 1;
+    var diff = 1;
     var offset = 1;
     var amounts = [];
     res.push(arr[0]);
