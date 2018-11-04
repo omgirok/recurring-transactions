@@ -1,3 +1,12 @@
+IMPLEMENTATION DETAILS:
+- findRecurrence() function executes a SELECT * query where results are sorted by name ascendingly
+- result of query is parsed by name and added to an object where the key is the transaction name without numbers
+    - this is to help with transaction names that are the same but have an invoice/ref number after the name
+- parse through the transactions of each name and find the payments that are recurring
+- omit payments that are one-time payments
+- send result to client
+
+
 THINGS TO NOTE REGARDING PROGRAM FUNCTIONALITY & CODING STYLE:
 1) API will not be able to detect recurring payments that occur:
     - once every 60/90/120/150/180 days 
@@ -10,7 +19,7 @@ THINGS TO NOTE REGARDING PROGRAM FUNCTIONALITY & CODING STYLE:
    of code/helper functions
 
 
-KEY TAKEAWAYS:
+KEY TAKEAWAYS / THINGS TO DO BETTER:
 - set trans_id as primary key in mongodb or try to set _id = trans_id
     - need to figure out how to upsert with mongodb -->
         - try insert using either db.collection.update() or db.collection.updateMany() 
@@ -36,7 +45,7 @@ query
     - instead of basing the recurrence off the 2 most recent transactions, try:
         1) check all differences of dates between transactions, store results into array and sort array
         2) from sorted array, extrapolate the value that occurs the most(the mode) 
-           as the frequency of recurrence
+           as the frequency of recurrence, if no mode then no frequency of recurrence
         3) proceed as usual
 
 - code can be cleaned up even further since i'm recycling a lot of logic in detecting recurrences
