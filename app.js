@@ -31,8 +31,8 @@ var transactionSchema = new mongoose.Schema({
     "name": String,
     "date": String,
     "amount": Number,
-    "trans_id": Number,
-    "user_id": Number,
+    "trans_id": String,
+    "user_id": String,
 });
 var Transaction = mongoose.model('Transaction', transactionSchema);
 // routes
@@ -45,12 +45,12 @@ function findRecurrence(callback) {
             callback(null, res);
     });
 }
-function upsertTransactions(req, res) {
+async function upsertTransactions(req, res) {
     console.log(req.body);
     var data = req.body;
     // list of transactions
     if (data[0]) {
-        Transaction.insertMany(data, function(err) {
+        await Transaction.insertMany(data, function(err) {
             if (err) return console.log(err);
             console.log("saved multiple entries to database");
         })
@@ -58,12 +58,38 @@ function upsertTransactions(req, res) {
     // one transaction
     else {
         var t = new Transaction(data);
-        t.save(function(err) {
+        await t.save(function(err) {
             if (err) return console.log(err);
-            console.log("saved " + t + " to database");
+            console.log("saved " + t + " to database");  
         })
     }
-    res.send();
+    findRecurrence((err, data) => {
+        console.log(data);
+        var lookup = {};
+        for(var i = 0; i < data.length; i++) {
+            var name = getName(data[i].name);
+            var newDate = new Date(data[i].date);
+            var newData = { "name": data[i].name, "date": newDate, "amount": data[i].amount, "trans_id": data[i].trans_id, "user_id": data[i].user_id};
+            if (lookup[name]) {    
+                lookup[name].push(newData);
+            }
+            else {
+                lookup[name] = [newData];
+            }
+        }
+        var results = [];
+        // sort transactions by chronological order then find recurrences
+        for (var bill in lookup) {
+            lookup[bill] = sortChronological(lookup[bill]);
+            var x = findRecurrences(lookup[bill]);
+            if (x) {
+                results.push(x);
+            }
+        }
+        console.log("RESULTS ARE:");
+        console.log(results);
+        res.send(results);
+    })
 }
 function getRecurringTransactions(req, res) {
     findRecurrence((err, data) => {
@@ -90,7 +116,6 @@ function getRecurringTransactions(req, res) {
             }
         }
         res.send(results);
-        
     })    
 }
 
@@ -98,7 +123,7 @@ function getRecurringTransactions(req, res) {
 function getName(s) {
     var words = s.split(' ');
     if (words.length == 1) {
-        // console.log("transaction name is 1 word: "+words[0]);
+        console.log("transaction name is 1 word: "+words[0]);
         return words[0];
     }
     let i = 0;
@@ -107,7 +132,7 @@ function getName(s) {
         newName+=words[i]
         i+=1
     }
-    // console.log("transaction new name is:" + newName);
+    console.log("transaction new name is:" + newName);
     return newName;
 }
 function sortChronological(arr) {
