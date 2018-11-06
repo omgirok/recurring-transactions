@@ -11,8 +11,10 @@ THINGS TO NOTE REGARDING PROGRAM FUNCTIONALITY & CODING STYLE:
 1) API will not be able to detect recurring payments that occur:
     - once every 60/90/120/150/180 days 
     - the logic to check for these recurrence frequencies would essentially be the same
+    
 2) there is logic in place to check for payments that occur:
     - yearly, monthly, biweekly, weekly, daily
+
 3) jammed everything into app.js, in real world practice it is better to keep endpoint logic 
    and helper functions in their own files and then do a module.export to improve readability 
    and for seperation of concerns; i did not expect that i would end up writing so many lines 
