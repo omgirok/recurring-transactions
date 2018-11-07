@@ -1,3 +1,15 @@
+** NEW UPDATES (11/6) **
+- Changed logic that finds recurring transactions:
+    - Only payments to/from the same name that have >= 3 payments will be considered for 
+      recurring transactions
+    - New logic now compares each transaction with every other transaction
+    - Picks recurrence frequency that yielded the most transactions 
+        - This helps to deal with transaction groups that have a lot of noise
+    - Checks estimated next_payment_date to see if the payment is still recurring
+    - Filters out payment amounts that dont fall within +-20% of the average
+
+- Organized functions into respective files for better file structure
+========================================================================================================================
 IMPLEMENTATION DETAILS:
 - findRecurrence() function executes a SELECT * query where results are sorted by name ascendingly
 - result of query is parsed by name and added to an object where the key is the transaction name without numbers

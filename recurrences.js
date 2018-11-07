@@ -1,6 +1,22 @@
 const MILLISECONDS_TO_DAY = 1000*60*60*24;
 
 // ==================== recurrence logic ====================
+module.exports.findCompanies = function(data) {
+    var lookup = {};
+    for(var i = 0; i < data.length; i++) {
+        var name = getName(data[i].name);
+        var newDate = new Date(data[i].date);
+        var newData = { "name": data[i].name, "date": newDate, "amount": data[i].amount, "trans_id": data[i].trans_id, "user_id": data[i].user_id};
+        if (lookup[name]) {    
+            lookup[name].push(newData);
+        }
+        else {
+            lookup[name] = [newData];
+        }
+    }
+    console.log(lookup);
+    return lookup;
+}
 module.exports.findRecurrences = function(arr) {
     // 1. check number of transactions for this company
     if (arr.length < 3) {
@@ -109,6 +125,7 @@ function finder(arr, diff) {
     results.push(nextDate);
     return [results.length,results];
 }
+// ==================== helper methods ====================
 function checkDiff(diff) {
     if (358 <= diff && diff <= 372) {
         return 365;
@@ -132,4 +149,31 @@ function checkDiff(diff) {
         return 1
     }
     return -1;
+}
+function getName(s) {
+    var words = s.split(' ');
+    if (words.length == 1) {
+        // console.log("transaction name is 1 word: "+words[0]);
+        return words[0];
+    }
+    let i = 0;
+    var newName = '';
+    while (i < words.length) {
+        if (hasNumber(words[i])) {
+            i+= words.length;
+        }
+        else {
+            newName+=words[i];
+            i+=1;
+        }
+    }
+    // console.log("transaction new name is:" + newName);
+    return newName;
+}
+function hasNumber(s) {
+    for(var i = 0; i < s.length; i++) {
+        if(!isNaN(parseInt(s[i]))) {
+            return true;
+        }
+    }
 }
