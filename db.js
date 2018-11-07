@@ -114,40 +114,46 @@ function findRecurrences(arr) {
     if (freq == -1) {
         console.log("not enough data to be sure of a recurrence");
     }
-    else {
-        if (freq) {
-            // o['next_amt'] = recurring[recurring.length-2];
-            // o['next_date'] = recurring[recurring.length-1];
-            // o['transactions'] = recurring.slice(1,recurring.length-2);   
-            return freq;    
-        }
-        // 3. check transaction amounts
-
+    // 3. check dates on recurrences
+    var now = new Date("2018-08-15T00:00:00.000Z");
+    var nextDate = freq[freq.length-1];
+    if (nextDate - now < 0) {
+        console.log("recurrence stopped awhile ago");
+        return;
     }
-    // var o = {"name": arr[0].name, "user_id": arr[0].user_id};
-    // var recurring = checkTimePeriods(arr);
-    // if (recurring) {
-    //     o['next_amt'] = recurring[recurring.length-2];
-    //     o['next_date'] = recurring[recurring.length-1];
-    //     o['transactions'] = recurring.slice(1,recurring.length-2);   
-    //     return o;    
-    // }
-    // return o;
-
+    // 4. check amounts to make sure they are within a +- 20% range of the average amount
+    var avg = freq[freq.length-2];
+    var transactions = [];
+    for(var i = 0; i < freq.length-2; i++) {
+        console.log(freq[i].amount,avg*0.8,avg*1.2);
+        if (Math.abs(freq[i].amount) >= Math.abs(avg*.08) && Math.abs(freq[i].amount) <= Math.abs(avg*1.2)) {
+            console.log("in range of average");
+            transactions.push(freq[i]);
+        }
+        else {
+            console.log("not in range of average");
+        }
+    }
+    // 5. return recurring transactions with high confidence that the transactions are recurring
+    var o = {"name": arr[0].name, "user_id": arr[0].user_id};
+    o['next_amt'] = avg;
+    o['next_date'] = nextDate;
+    o['transactions'] = transactions;   
+    return o;
 }
 function findFrequency(arr) {
     var maxElems = [arr[0]];
     // handle 3 transactions manually
-    if (arr.length == 3) {
+    if (arr.length == 3) {  
         var diff1 = (arr[0].date - arr[1].date)/(MILLISECONDS_TO_DAY);
         var diff2 = (arr[1].date - arr[2].date)/(MILLISECONDS_TO_DAY);
         if (Math.abs(diff1 - diff2) > 3) {
             return -1;
         }
         else {
-            var elem = frequencyFinder(arr.slice(i), diff1);
-            if (elem[1] > maxElems.length) {
-                maxElems = elem[2];
+            var elem = finder(arr, diff1);
+            if (elem && elem[0] > maxElems.length) {
+                maxElems = elem[1];
             }
             return maxElems;
         }
@@ -157,18 +163,16 @@ function findFrequency(arr) {
     else {
         for(var i = 0; i < arr.length-1; i++) {
             if (maxElems.length > arr.length-i) {
-                console.log("BREAKING");
                 break;
             }
             for(var j = i+1; j < arr.length; j++) {
                 // determine if there are transactions that follow some sort of
                 // normal recurrence frequency and check for those transactions
-                var diff = Math.floor((arr[i].date - arr[j].date)/(MILLISECONDS_TO_DAY));
-                diff = checkDiff(diff);
+                var diff = checkDiff(Math.floor((arr[i].date - arr[j].date)/(MILLISECONDS_TO_DAY)));
                 if (diff != -1) {
-                    var elem = frequencyFinder(arr.slice(i), diff);
-                    if (elem[1] > maxElems.length) {
-                        maxElems = elem[2];
+                    var elem = finder(arr.slice(i), diff);
+                    if (elem && elem[0] > maxElems.length) {
+                        maxElems = elem[1];
                     }
                 }   
             }
@@ -176,62 +180,48 @@ function findFrequency(arr) {
         return maxElems;
     }
 }
-function checkDiff(diff) {
-    if (358 <= diff && diff <= 372) {
-        return 365;
-    }
-    if (83 <= diff && diff <= 97) {
-        return 90;
-    }
-    if (56 <= diff && diff <= 64) {
-        return 60;
-    }
-    if (28 <= diff && diff <= 32) {
-        return 30;
-    }
-    if (12 <= diff && diff <= 17) {
-        return 15
-    }
-    if (5 <= diff && diff <= 9) {
-        return 7
-    }
-    if (1 <= diff && diff <= 2) {
-        return 1
-    }
-    return -1;
-}
-function frequencyFinder(arr, diff) {
+
+function finder(arr, diff) {
     var results = [];
-    var amounts = [];
     var offset = 0;
     var nextDiff = 0;
-
+    var amounts = [];
+    // lowerBound and upperBound determines the margin of error between transactions
+    // ex: for monthly transactions, give a margin of +-(3.5+offset/3) days
+    // if recurrences were strict then transactions would occur on
+    //    0,      30,      60,      90,      120,    etc.
+    // with margin of error transaction can occure anywhere between
+    // [-3,3], [27,33], [56,64], [86,94], [116,124],   etc.
     for(var i = 1; i < arr.length; i++) {
         nextDiff += Math.floor((arr[i-1].date - arr[i].date)/(MILLISECONDS_TO_DAY));
-        // lower and upper bound determines the margin of error between transactions
-        // ex: for monthly transactions, give a margin of +-(3.5+offset/3) days
-        // if recurrences were strict then transactions would occur on
-        //    0,      30,      60,      90,      120,    etc.
-        // with margin of error transaction can occure anywhere between
-        // [-3,3], [27,33], [56,64], [86,94], [116,124],   etc.
         var lowerBound = Math.ceil(diff*offset - (3.5+offset/3));
         var upperBound = Math.floor(diff*offset + (3.5+offset/3));
         if (lowerBound <= (nextDiff-diff) && ((nextDiff-diff) <= upperBound)) {
             results.push(arr[i]);
+            amounts.push(arr[i].amount);
             offset+=1
         }
     }
+    
+    // also send next expected transaction date
     var nextDate = new Date(arr[0].date);
-    nextDate.setFullYear(nextDate.getTime()+MILLISECONDS_TO_DAY*diff);
-
+    nextDate.setTime(nextDate.getTime()+MILLISECONDS_TO_DAY*diff);
+    // also send average amount
+    var avg = amounts.reduce(
+        ( accumulator, currentValue ) => accumulator + currentValue,
+        0
+    ) / amounts.length;
+    
     results = [arr[0]].concat(results);
-    return [diff,results.length,results];
+    results.push(avg);
+    results.push(nextDate);
+    return [results.length,results];
 }
 
 function checkTimePeriods(arr) {
     //var freq = findRecurrenceFrequency(arr);
     var diff = (arr[0].date - arr[1].date)/(MILLISECONDS_TO_DAY);
-    var sept = new Date("2018-08-15T00:00:00.000Z")
+    var now = new Date("2018-08-15T00:00:00.000Z");
     if (358 <= diff && diff <= 372) {
         // most recent transaction is too old and most likely not recurring
         if((sept - arr[0].date)/(MILLISECONDS_TO_DAY) > 729) {
@@ -271,39 +261,8 @@ function checkTimePeriods(arr) {
             console.log("most recent transaction for " + arr[0].name + " is too far into the past");
             return []
         }
-        return checkDaily(arr);
+        // return checkDaily(arr);
     }
-}
-function getTransactionsForFrequency(arr, freq, diff) {
-    var res = [freq]
-    var offset = 1;
-    var amounts = [];
-    // assumes first transaction is the most recent recurring transaction
-    res.push(arr[0]);
-    for(var i = 1; i < arr.length; i++) {
-        // console.log("diff: " + diff);
-        var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(MILLISECONDS_TO_DAY));
-        if(Math.abs(newDiff - diff) > 7) {
-            // does not follow monthly pattern, skip transaction
-            offset+=1
-            continue;
-        } 
-        else {
-            offset=1
-            amounts.push(arr[i].amount);
-            res.push(arr[i]);
-        }
-    }
-    var avg = amounts.reduce(
-        ( accumulator, currentValue ) => accumulator + currentValue,
-        0
-    ) / amounts.length;
-    var nextDate = new Date(arr[0].date);
-    nextDate.setFullYear(nextDate.getFullYear()+1);
-    res.push(avg);
-    res.push(nextDate);
-    return res;
-    
 }
 function checkYearly(arr) {
     var res = ["yearly"];
@@ -499,4 +458,28 @@ function sortChronological(arr) {
         return 0;
     }
     return arr.sort(compare);
+}
+function checkDiff(diff) {
+    if (358 <= diff && diff <= 372) {
+        return 365;
+    }
+    if (83 <= diff && diff <= 97) {
+        return 90;
+    }
+    if (56 <= diff && diff <= 64) {
+        return 60;
+    }
+    if (28 <= diff && diff <= 32) {
+        return 30;
+    }
+    if (12 <= diff && diff <= 17) {
+        return 15
+    }
+    if (5 <= diff && diff <= 9) {
+        return 7
+    }
+    if (1 <= diff && diff <= 2) {
+        return 1
+    }
+    return -1;
 }
