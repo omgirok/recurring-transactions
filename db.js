@@ -113,6 +113,7 @@ function findRecurrences(arr) {
     var freq = findFrequency(arr);
     if (freq == -1) {
         console.log("not enough data to be sure of a recurrence");
+        return
     }
     // 3. check dates on recurrences
     var now = new Date("2018-08-15T00:00:00.000Z");
@@ -121,7 +122,8 @@ function findRecurrences(arr) {
         console.log("recurrence stopped awhile ago");
         return;
     }
-    // 4. check amounts to make sure they are within a +- 20% range of the average amount
+    // 4. check amounts to make sure they are within a +- 20% range of the average amount,
+    //    filter results that aren't in the range
     var avg = freq[freq.length-2];
     var transactions = [];
     for(var i = 0; i < freq.length-2; i++) {
@@ -202,7 +204,7 @@ function finder(arr, diff) {
             offset+=1
         }
     }
-    
+
     // also send next expected transaction date
     var nextDate = new Date(arr[0].date);
     nextDate.setTime(nextDate.getTime()+MILLISECONDS_TO_DAY*diff);
@@ -217,210 +219,6 @@ function finder(arr, diff) {
     results.push(nextDate);
     return [results.length,results];
 }
-
-function checkTimePeriods(arr) {
-    //var freq = findRecurrenceFrequency(arr);
-    var diff = (arr[0].date - arr[1].date)/(MILLISECONDS_TO_DAY);
-    var now = new Date("2018-08-15T00:00:00.000Z");
-    if (358 <= diff && diff <= 372) {
-        // most recent transaction is too old and most likely not recurring
-        if((sept - arr[0].date)/(MILLISECONDS_TO_DAY) > 729) {
-            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-            return;
-        }
-        return getTransactionsForFrequency(arr, "yearly", 365);
-    }
-    // monthly recurrence
-    if (28 <= diff && diff <= 32) {
-        if((sept - arr[0].date)/(MILLISECONDS_TO_DAY) > 59) {
-            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-            return;
-        }
-        return getTransactionsForFrequency(arr, "monthly", 30);
-    }
-    // biweekly recurrence
-    if (12 <= diff && diff <= 16) {
-        if((sept - arr[0].date)/(MILLISECONDS_TO_DAY) > 27) {
-            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-            return;
-        }
-        return getTransactionsForFrequency(arr, "biweekly", 14);
-    }
-    // weekly recurrence
-    if (5 <= diff && diff <= 9) {
-        if((sept - arr[0].date)/(MILLISECONDS_TO_DAY) > 13) {
-            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-            return;
-        }
-        return getTransactionsForFrequency(arr, "weekly", 7);
-    }
-    // daily recurrence
-    if (1 <= diff && diff <= 2) {
-        // most recent transaction is too old and most likely not recurring
-        if((sept - arr[0].date)/(MILLISECONDS_TO_DAY) > 2) {
-            console.log("most recent transaction for " + arr[0].name + " is too far into the past");
-            return []
-        }
-        // return checkDaily(arr);
-    }
-}
-function checkYearly(arr) {
-    var res = ["yearly"];
-    var diff = 365;
-    var offset = 1;
-    var amounts = [];
-    res.push(arr[0]);
-    for(var i = 1; i < arr.length; i++) {
-        // console.log("diff: " + diff);
-        var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(MILLISECONDS_TO_DAY));
-        if(Math.abs(newDiff - diff) > 7) {
-            // does not follow monthly pattern, skip transaction
-            offset+=1
-            continue;
-        } 
-        else {
-            offset=1
-            amounts.push(arr[i].amount);
-            res.push(arr[i]);
-        }
-    }
-    var avg = amounts.reduce(
-        ( accumulator, currentValue ) => accumulator + currentValue,
-        0
-    ) / amounts.length;
-    var nextDate = new Date(arr[0].date);
-    nextDate.setFullYear(nextDate.getFullYear()+1);
-    res.push(avg);
-    res.push(nextDate);
-    return res;
-}
-function checkMonthly(arr) {
-    var res = ["monthly"];
-    var diff = 30;
-    var offset = 1;
-    var amounts = [];
-    res.push(arr[0]);
-    for(var i = 1; i < arr.length; i++) {
-        // console.log("diff: " + diff);
-        var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(MILLISECONDS_TO_DAY));
-        // console.log("newDiff%diff: " + newDiff); 
-        if(Math.abs(newDiff - diff) > 3) {
-            // does not follow monthly pattern, skip transaction
-            offset+=1
-            continue;
-        } 
-        else {
-            offset=1
-            amounts.push(arr[i].amount);
-            res.push(arr[i]);
-        }  
-    }
-    var avg = amounts.reduce(
-        ( accumulator, currentValue ) => accumulator + currentValue,
-        0
-    ) / amounts.length;
-    var nextDate = new Date(arr[0].date);
-    nextDate.setTime(nextDate.getTime() + MILLISECONDS_TO_DAY*30);
-    res.push(avg);
-    res.push(nextDate);
-    return res;
-}
-function checkBiweekly(arr) {
-    var res = ["biweekly"];
-    var diff = 14;
-    var offset = 1;
-    var amounts = [];
-    res.push(arr[0]);
-    for(var i = 1; i < arr.length; i++) {
-        // console.log("diff: " + diff);
-        var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(MILLISECONDS_TO_DAY));
-        // console.log("newDiff%diff: " + newDiff); 
-        if(Math.abs(newDiff - diff) > 3) {
-            // does not follow monthly pattern, skip transaction
-            offset+=1
-            continue;
-        } 
-        else {
-            offset=1
-            amounts.push(arr[i].amount);
-            res.push(arr[i]);
-        }
-        // console.log((arr[0].date - arr[i].date)/(MILLISECONDS_TO_DAY));    
-    }
-    var avg = amounts.reduce(
-        ( accumulator, currentValue ) => accumulator + currentValue,
-        0
-    ) / amounts.length;
-    var nextDate = new Date(arr[0].date);
-    nextDate.setTime(nextDate.getTime() + MILLISECONDS_TO_DAY*14);
-    res.push(avg);
-    res.push(nextDate);
-    return res;
-}
-function checkWeekly(arr) {
-    var res = ["weekly"];
-    var diff = 7;
-    var offset = 1;
-    var amounts = [];
-    res.push(arr[0]);
-    for(var i = 1; i < arr.length; i++) {
-        // console.log("diff: " + diff);
-        var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(MILLISECONDS_TO_DAY));
-        if(Math.abs(newDiff - diff) > 1) {
-            // does not follow monthly pattern, skip transaction
-            offset+=1
-            continue;
-        } 
-        else {
-            offset=1
-            amounts.push(arr[i].amount);
-            res.push(arr[i]);
-        }
-        // console.log((arr[0].date - arr[i].date)/(MILLISECONDS_TO_DAY));    
-    }
-    var avg = amounts.reduce(
-        ( accumulator, currentValue ) => accumulator + currentValue,
-        0
-    ) / amounts.length;;
-    var nextDate = new Date(arr[0].date);
-    nextDate.setTime(nextDate.getTime() + MILLISECONDS_TO_DAY*7);
-    res.push(avg);
-    res.push(nextDate);
-    return res;
-}
-function checkDaily(arr) {
-    var res = ["daily"];
-    var diff = 1;
-    var offset = 1;
-    var amounts = [];
-    res.push(arr[0]);
-    for(var i = 1; i < arr.length; i++) {
-        // console.log("diff: " + diff);
-        var newDiff = Math.ceil((arr[i-offset].date - arr[i].date)/(MILLISECONDS_TO_DAY));
-        // console.log("newDiff%diff: " + newDiff); 
-        if(Math.abs(newDiff - diff) > 1) {
-            // does not follow monthly pattern, skip transaction
-            offset+=1;
-            continue;
-        } 
-        else {
-            offset=1;
-            amounts.push(arr[i].amount);
-            res.push(arr[i]);
-        }
-        // console.log((arr[0].date - arr[i].date)/(MILLISECONDS_TO_DAY));    
-    }
-    var avg = amounts.reduce(
-        ( accumulator, currentValue ) => accumulator + currentValue,
-        0
-    );
-    var nextDate = new Date(arr[0].date);
-    nextDate.setTime(nextDate.getTime() + MILLISECONDS_TO_DAY);
-    res.push(avg);
-    res.push(nextDate);
-    return res;
-}
-
 // ==================== helper methods ====================
 function getName(s) {
     var words = s.split(' ');
